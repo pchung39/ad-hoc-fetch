@@ -16,50 +16,17 @@ var retrieve = (options = {}) => {
     .catch(e => console.log("error", e));
 
 };
-/*
-var createOffset = (page) => {
-
-  if (page > 0) {
-    let offset = (page * 10) - 9;
-  } else {
-    let offset = 0
-  };
-
-  return offset;
-
-};
-*/
 
 var formatResponse = (responseList, options) => {
   let idsArray = [];
   let closedCount = 0;
   let openElements = [];
   let pageNumber = options["page"] || 0
-  // activate foreach loop
-  let primaryColors = ["red", "blue", "yellow"];
-  console.log(pageNumber);
+  const primaryColors = ["red", "blue", "yellow"];
 
-
-  // calculuate previousPage
-
-
-  let pageResults = determinePages(options);
-  //console.log(pageResults)
-  /*
-  else {
-    if (pageNumber < 2) {
-      let previous = null;
-      let next = 2;
-    } else if (pageNumber > 50) {
-      let previous = pageNumber - 1;
-      let next = null;
-    } else {
-      let previous = pageNumber - 1;
-      let next = pageNumber + 1;
-    }
-  }
-  */
-
+  let invalidColorFlag = determineInvalidColor(options["colors"]);
+  console.log("flag ", invalidColorFlag );
+  let pageResults = determinePages(options, invalidColorFlag);
 
   responseList.forEach((element) => {
     // push to ids Array
@@ -96,14 +63,41 @@ var formatResponse = (responseList, options) => {
 
 }
 
-var determinePages = (options) => {
+
+var determineInvalidColor = (colorOptions) => {
+  console.log("colorOptions: ", colorOptions);
+  const colorList = ["red", "brown", "blue", "yellow", "green"];
+  let invalidFlag = false;
+
+  // if colorOptions is "undefined"
+  if (!colorOptions) {
+    invalidFlag = false;
+    return invalidFlag
+  } else {
+    colorOptions.forEach((element) => {
+      console.log(element);
+      if(colorList.includes(element) == false) {
+        invalidFlag = true;
+        return invalidFlag
+      }
+    })
+  }
+
+  return invalidFlag;
+
+};
+
+var determinePages = (options, flag) => {
   let page = options["page"] || 0;
   let pageObject = {
     previous: null,
     next: null
   }
 
-  if (page < 2) {
+  if (flag) {
+    pageObject["previous"] = null;
+    pageObject["next"] = null;
+  } else if (page < 2) {
     pageObject["previous"] = null;
     pageObject["next"] = 2;
   } else if (page >= 50) {
@@ -118,15 +112,11 @@ var determinePages = (options) => {
 
 };
 
-var buildQueryString = (parameters, url) => {
-  // use format to shorten code URI()
+var buildQueryString = (options, url) => {
 
-  let colors = parameters["colors"] ? parameters["colors"] : ["red", "brown", "blue", "yellow", "green"];
-  let page = parameters["page"] ? (parameters["page"] * 10) - 10 : 0;
+  let colors = options["colors"] ? options["colors"] : ["red", "brown", "blue", "yellow", "green"];
+  let page = options["page"] ? (options["page"] * 10) - 10 : 0;
 
-
-  //let offset = createOffset(page);
-  //let colorString = createColorString(colors);
 
   let queryString = URI(url)
     .addSearch("limit", 10)
