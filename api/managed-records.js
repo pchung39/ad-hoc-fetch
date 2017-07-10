@@ -8,7 +8,6 @@ window.path = "http://localhost:3000/records";
 var retrieve = (options = {}) => {
 
   let queryString = buildQueryString(options, path).toString();
-  //console.log(queryString);
 
   return fetch(queryString)
     .then(response => {
@@ -16,49 +15,56 @@ var retrieve = (options = {}) => {
       if (response.ok == true) {
         return json
       } else {
-        //console.log("The dog didn't fetch correctly");
         return json.then(Promise.reject.bind(Promise));
       }
     })
-    .then(response => formatResponse(response, options))
+    .then(response => formatResponse(response, options, queryString))
     .catch(e => console.log(e))
 
 
 };
 
+var buildQueryString = (options, url) => {
 
+  let colors = options["colors"] ? options["colors"] : ["red", "brown", "blue", "yellow", "green"];
+  let page = options["page"] ? (options["page"] * 10) - 10 : 0;
 
-var formatResponse = (responseList, options) => {
+  let queryString = URI(url)
+    .addSearch("limit", 10)
+    .addSearch("offset", page)
+    .addSearch("color[]", colors)
+
+  return queryString
+};
+
+var formatResponse = (responseList, options, queryString) => {
   let idsArray = [];
   let closedCount = 0;
   let openElements = [];
-  let pageNumber = options["page"] || 0
+  let pageNumber = options["page"] || 0;
   const primaryColors = ["red", "blue", "yellow"];
 
   let invalidColorFlag = determineInvalidColor(options["colors"]);
-  //console.log("flag ", invalidColorFlag );
-  let pageResults = determinePages(options, invalidColorFlag);
+  let pageResults = getPageAssets(queryString);
 
   responseList.forEach((element) => {
-    // push to ids Array
+
     idsArray.push(element["id"]);
 
-    // if open push whole element to openElements list
     if (element["disposition"] == "open") {
-      //determine if color is primary color
-      let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
 
-      //add evaluation to element object
+      let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
       element["isPrimary"] = primaryColorEvaluation;
       openElements.push(element);
+
     }
-    // determine if primary color and closed
 
     if (element["disposition"] == "closed") {
       if (primaryColors.includes(element["color"]) == true) {
           closedCount++;
         }
       };
+
     });
 
   let recordObject = {
@@ -98,43 +104,49 @@ var determineInvalidColor = (colorOptions) => {
 
 };
 
-var determinePages = (options, flag) => {
-  let page = options["page"] || 0;
+var fetchNextAndPreviousPages = (path, options={}) => {
+
+  let colors = options["colors"] ? options["colors"] : ["red", "brown", "blue", "yellow", "green"];
+  let queryString = buildQueryString(options, path).toString();
+
+  return fetch(queryString)
+    .then(response => response.json())
+    .then(response => {return response})
+    .catch(error => console.log(error))
+
+}
+
+var getPageAssets = (url) => {
+  let uri = URI(url);
+  let urlparameters = URI.parseQuery(uri.query());
+  let offset = parseInt(urlparameters["offset"]);
+  let colors = urlparameters["color[]"];
   let pageObject = {
     previous: null,
     next: null
-  }
+  };
 
-  if (flag) {
-    pageObject["previous"] = null;
-    pageObject["next"] = null;
-  } else if (page < 2) {
-    pageObject["previous"] = null;
-    pageObject["next"] = 2;
-  } else if (page >= 50) {
-    pageObject["previous"] = page - 1;
-    pageObject["next"] = null;
+  let previousPage = (offset) / 10;
+  let nextPage = (offset + 20) / 10;
+
+  if (offset == 0) {
+    let nextPageCall = fetchNextAndPreviousPages(path,{ page: nextPage, colors: colors })
+      .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
+    let previousPageCall = null;
+    Promise.all([nextPageCall, previousPageCall])
+      .then(response => {return pageObject})
+
   } else {
-    pageObject["previous"] = page - 1;
-    pageObject["next"] = page + 1;
+    let previousPageCall = fetchNextAndPreviousPages(path,{ page: previousPage, colors: colors })
+      .then(response => { pageObject["previous"] = response.length > 0 ? previousPage : null })
+    let nextPageCall = fetchNextAndPreviousPages(path, { page: nextPage, colors: colors })
+      .then(response => {
+        pageObject["next"] = response.length > 0 ? nextPage : null })
+
+    Promise.all([nextPageCall, previousPageCall])
+      .then(response => {return pageObject})
   }
 
-  return pageObject
-
-};
-
-var buildQueryString = (options, url) => {
-
-  let colors = options["colors"] ? options["colors"] : ["red", "brown", "blue", "yellow", "green"];
-  let page = options["page"] ? (options["page"] * 10) - 10 : 0;
-
-
-  let queryString = URI(url)
-    .addSearch("limit", 10)
-    .addSearch("offset", page)
-    .addSearch("color[]", colors)
-
-  return queryString
 };
 
 export default retrieve;
