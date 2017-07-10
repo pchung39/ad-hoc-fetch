@@ -8,14 +8,25 @@ window.path = "http://localhost:3000/records";
 var retrieve = (options = {}) => {
 
   let queryString = buildQueryString(options, path).toString();
-  console.log(queryString);
+  //console.log(queryString);
 
   return fetch(queryString)
-    .then(res => res.json())
-    .then(res => formatResponse(res, options))
-    .catch(e => console.log("error", e));
+    .then(response => {
+      let json = response.json();
+      if (response.ok == true) {
+        return json
+      } else {
+        //console.log("The dog didn't fetch correctly");
+        return json.then(Promise.reject.bind(Promise));
+      }
+    })
+    .then(response => formatResponse(response, options))
+    .catch(e => console.log(e))
+
 
 };
+
+
 
 var formatResponse = (responseList, options) => {
   let idsArray = [];
@@ -25,7 +36,7 @@ var formatResponse = (responseList, options) => {
   const primaryColors = ["red", "blue", "yellow"];
 
   let invalidColorFlag = determineInvalidColor(options["colors"]);
-  console.log("flag ", invalidColorFlag );
+  //console.log("flag ", invalidColorFlag );
   let pageResults = determinePages(options, invalidColorFlag);
 
   responseList.forEach((element) => {
@@ -58,14 +69,14 @@ var formatResponse = (responseList, options) => {
     closedPrimaryCount: closedCount
   };
   // return response object
-  console.log(recordObject);
+  //console.log(recordObject);
   return recordObject
 
 }
 
 
 var determineInvalidColor = (colorOptions) => {
-  console.log("colorOptions: ", colorOptions);
+  //console.log("colorOptions: ", colorOptions);
   const colorList = ["red", "brown", "blue", "yellow", "green"];
   let invalidFlag = false;
 
@@ -75,7 +86,7 @@ var determineInvalidColor = (colorOptions) => {
     return invalidFlag
   } else {
     colorOptions.forEach((element) => {
-      console.log(element);
+      //console.log(element);
       if(colorList.includes(element) == false) {
         invalidFlag = true;
         return invalidFlag
