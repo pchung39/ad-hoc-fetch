@@ -18,8 +18,8 @@ var retrieve = (options = {}) => {
         return json.then(Promise.reject.bind(Promise));
       }
     })
-    .then(response => formatResponse(response, options, queryString))
-    .catch(e => console.log(e))
+    .then(response => returnResponse(response, options, queryString))
+    .catch(e => console.log("error: ", e))
 
 
 };
@@ -37,52 +37,52 @@ var buildQueryString = (options, url) => {
   return queryString
 };
 
-var formatResponse = (responseList, options, queryString) => {
+var returnResponse = (responseList, options, queryString) => {
+
+  return getPageAssets(queryString)
+  .then(response => formatResponse(response, responseList, options))
+  //.then(responseObject => { return responseObject })
+
+}
+
+
+var formatResponse = (pageResults, responseList, options) => {
+
   let idsArray = [];
   let closedCount = 0;
   let openElements = [];
   let pageNumber = options["page"] || 0;
   const primaryColors = ["red", "blue", "yellow"];
 
-  return getPageAssets(queryString)
-  .then(response => {
-    // will need to turn this into separate function and use .then from page results
-    responseList.forEach((element) => {
+  responseList.forEach((element) => {
 
-      idsArray.push(element["id"]);
-      if (element["disposition"] == "open") {
+    idsArray.push(element["id"]);
+    if (element["disposition"] == "open") {
 
-        let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
-        element["isPrimary"] = primaryColorEvaluation;
-        openElements.push(element);
+      let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
+      element["isPrimary"] = primaryColorEvaluation;
+      openElements.push(element);
 
-      }
+    }
 
-      if (element["disposition"] == "closed") {
-        if (primaryColors.includes(element["color"]) == true) {
-            closedCount++;
-          }
-        };
+    if (element["disposition"] == "closed") {
+      if (primaryColors.includes(element["color"]) == true) {
+          closedCount++;
+        }
+      };
 
-      });
+    });
 
-    let recordObject = {
-      previousPage : response["previous"],
-      nextPage: response["next"],
-      ids : idsArray,
-      open : openElements,
-      closedPrimaryCount: closedCount
-    };
-
-    return recordObject
-  }
-
-  );
-
-
-  // return response object
-  //console.log(recordObject);
+  let recordObject = {
+    previousPage : pageResults["previous"],
+    nextPage: pageResults["next"],
+    ids : idsArray,
+    open : openElements,
+    closedPrimaryCount: closedCount
+  };
+  
   return recordObject
+
 
 }
 
@@ -94,7 +94,7 @@ var fetchNextAndPreviousPages = (path, options={}) => {
   return fetch(queryString)
     .then(response => response.json())
     .then(response => {return response})
-    .catch(error => console.log(error))
+    .catch(error => console.log("error: ", error))
 
 }
 
@@ -103,21 +103,20 @@ var getPageAssets = (url) => {
   let urlparameters = URI.parseQuery(uri.query());
   let offset = parseInt(urlparameters["offset"]);
   let colors = urlparameters["color[]"];
+  let previousPage = (offset) / 10;
+  let nextPage = (offset + 20) / 10;
   let pageObject = {
     previous: null,
     next: null
   };
 
-  let previousPage = (offset) / 10;
-  let nextPage = (offset + 20) / 10;
-
   if (offset == 0) {
+    let previousPageCall = null;
+
     let nextPageCall = fetchNextAndPreviousPages(path,{ page: nextPage, colors: colors })
       .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
 
-    let previousPageCall = null;
-
-    return Promise.all([nextPageCall, previousPageCall])
+    return Promise.all([previousPageCall, nextPageCall])
       .then(response => {return pageObject})
 
   } else {
@@ -127,7 +126,7 @@ var getPageAssets = (url) => {
     let nextPageCall = fetchNextAndPreviousPages(path, { page: nextPage, colors: colors })
       .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
 
-    return Promise.all([nextPageCall, previousPageCall])
+    return Promise.all([previousPageCall, nextPageCall])
       .then(response => {return pageObject})
   }
 
