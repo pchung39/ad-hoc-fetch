@@ -44,65 +44,47 @@ var formatResponse = (responseList, options, queryString) => {
   let pageNumber = options["page"] || 0;
   const primaryColors = ["red", "blue", "yellow"];
 
-  let invalidColorFlag = determineInvalidColor(options["colors"]);
-  let pageResults = getPageAssets(queryString);
+  return getPageAssets(queryString)
+  .then(response => {
+    // will need to turn this into separate function and use .then from page results
+    responseList.forEach((element) => {
 
-  responseList.forEach((element) => {
+      idsArray.push(element["id"]);
+      if (element["disposition"] == "open") {
 
-    idsArray.push(element["id"]);
+        let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
+        element["isPrimary"] = primaryColorEvaluation;
+        openElements.push(element);
 
-    if (element["disposition"] == "open") {
+      }
 
-      let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
-      element["isPrimary"] = primaryColorEvaluation;
-      openElements.push(element);
+      if (element["disposition"] == "closed") {
+        if (primaryColors.includes(element["color"]) == true) {
+            closedCount++;
+          }
+        };
 
-    }
+      });
 
-    if (element["disposition"] == "closed") {
-      if (primaryColors.includes(element["color"]) == true) {
-          closedCount++;
-        }
-      };
+    let recordObject = {
+      previousPage : response["previous"],
+      nextPage: response["next"],
+      ids : idsArray,
+      open : openElements,
+      closedPrimaryCount: closedCount
+    };
 
-    });
+    return recordObject
+  }
 
-  let recordObject = {
-    previousPage : pageResults["previous"],
-    nextPage: pageResults["next"],
-    ids : idsArray,
-    open : openElements,
-    closedPrimaryCount: closedCount
-  };
+  );
+
+
   // return response object
   //console.log(recordObject);
   return recordObject
 
 }
-
-
-var determineInvalidColor = (colorOptions) => {
-  //console.log("colorOptions: ", colorOptions);
-  const colorList = ["red", "brown", "blue", "yellow", "green"];
-  let invalidFlag = false;
-
-  // if colorOptions is "undefined"
-  if (!colorOptions) {
-    invalidFlag = false;
-    return invalidFlag
-  } else {
-    colorOptions.forEach((element) => {
-      //console.log(element);
-      if(colorList.includes(element) == false) {
-        invalidFlag = true;
-        return invalidFlag
-      }
-    })
-  }
-
-  return invalidFlag;
-
-};
 
 var fetchNextAndPreviousPages = (path, options={}) => {
 
@@ -132,18 +114,20 @@ var getPageAssets = (url) => {
   if (offset == 0) {
     let nextPageCall = fetchNextAndPreviousPages(path,{ page: nextPage, colors: colors })
       .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
+
     let previousPageCall = null;
-    Promise.all([nextPageCall, previousPageCall])
+
+    return Promise.all([nextPageCall, previousPageCall])
       .then(response => {return pageObject})
 
   } else {
     let previousPageCall = fetchNextAndPreviousPages(path,{ page: previousPage, colors: colors })
       .then(response => { pageObject["previous"] = response.length > 0 ? previousPage : null })
-    let nextPageCall = fetchNextAndPreviousPages(path, { page: nextPage, colors: colors })
-      .then(response => {
-        pageObject["next"] = response.length > 0 ? nextPage : null })
 
-    Promise.all([nextPageCall, previousPageCall])
+    let nextPageCall = fetchNextAndPreviousPages(path, { page: nextPage, colors: colors })
+      .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
+
+    return Promise.all([nextPageCall, previousPageCall])
       .then(response => {return pageObject})
   }
 
