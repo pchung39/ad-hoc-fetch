@@ -5,8 +5,8 @@ import URI from "urijs";
 window.path = "http://localhost:3000/records";
 
 /*
-MAIN FUNCTION: takes in an "options" dictionary, then parses the results, finally
-returning the object.
+MAIN FUNCTION: takes in an "options" dictionary which can either have a page number
+a color or both. The fetch response is manipulated into the desired object format and returned.
 */
 var retrieve = (options = {}) => {
 
@@ -28,7 +28,7 @@ var retrieve = (options = {}) => {
 };
 
 /*
-Builds a callable query string using the "localhost" path and the "options" argument.
+Builds a query string using the "localhost" path and the "options" argument.
 Additional validation is used in the cases where a page or colors are not provided in the "options" object.
 */
 var buildQueryString = (options, url) => {
@@ -82,15 +82,14 @@ var formatRecords = (pageResults, responseList, options) => {
   responseList.forEach((element) => {
 
     idsArray.push(element["id"]);
+
     if (element["disposition"] == "open") {
 
-      let primaryColorEvaluation = primaryColors.includes(element["color"]) ? true : false;
-      element["isPrimary"] = primaryColorEvaluation;
+      element["isPrimary"] = primaryColors.includes(element["color"]) ? true : false;
       openElements.push(element);
 
-    }
+    } else if (element["disposition"] == "closed") {
 
-    if (element["disposition"] == "closed") {
       if (primaryColors.includes(element["color"]) == true) {
           closedCount++;
         }
@@ -127,20 +126,21 @@ var getPageAssets = (url) => {
   let nextPage = (offset + 20) / 10;
   let previousPageCall;
   let nextPageCall;
-  
   let pageObject = {
     previous: null,
     next: null
   };
 
   if (offset == 0) {
+
     previousPageCall = null;
 
     nextPageCall = fetchNextAndPreviousPages(path,{ page: nextPage, colors: colors })
-      .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
+      .then(response => {pageObject["next"] = response.length > 0 ? nextPage : null})
       .catch(e => console.log("error: ", e))
 
   } else {
+
     previousPageCall = fetchNextAndPreviousPages(path,{ page: previousPage, colors: colors })
       .then(response => { pageObject["previous"] = response.length > 0 ? previousPage : null })
       .catch(e => console.log("error: ", e))
@@ -163,7 +163,6 @@ the initial fetch request. Returns the fetch call response.
 */
 var fetchNextAndPreviousPages = (path, options={}) => {
 
-  let colors = options["colors"] ? options["colors"] : ["red", "brown", "blue", "yellow", "green"];
   let queryString = buildQueryString(options, path).toString();
 
   return fetch(queryString)
@@ -172,7 +171,5 @@ var fetchNextAndPreviousPages = (path, options={}) => {
     .catch(error => console.log("error: ", error))
 
 }
-
-
 
 export default retrieve;
