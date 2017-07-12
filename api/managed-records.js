@@ -52,7 +52,7 @@ is additional data immediately before and after the initial request. This proces
 */
 var returnRecords = (responseList, options, queryString) => {
 
-  return getPageAssets(queryString)
+  return getPageAssets(responseList, options)
   .then(response => formatRecords(response, responseList, options))
   .catch(e => console.log("error: ", e))
 
@@ -85,7 +85,7 @@ var formatRecords = (pageResults, responseList, options) => {
 
     if (element["disposition"] == "open") {
 
-      element["isPrimary"] = primaryColors.includes(element["color"]) ? true : false;
+      element["isPrimary"] = primaryColors.includes(element["color"]);
       openElements.push(element);
 
     } else if (element["disposition"] == "closed") {
@@ -117,39 +117,39 @@ immediately before and after the initial fetch request. The results will always 
 fetch response will be an empty list or a populated list. With this information we can make an informed
 decision on what the previous and next page numbers will be.
 */
-var getPageAssets = (url) => {
-  let uri = URI(url);
-  let urlparameters = URI.parseQuery(uri.query());
-  let offset = parseInt(urlparameters["offset"]);
-  let colors = urlparameters["color[]"];
-  let previousPage = (offset) / 10;
-  let nextPage = (offset + 20) / 10;
+var getPageAssets = (responseList, options) => {
+
   let previousPageCall;
   let nextPageCall;
   let pageObject = {
     previous: null,
     next: null
   };
+  let colors = options["colors"]
+  let currentPage = options["page"] ? options["page"]: 1;
 
-  if (offset == 0) {
+  if (currentPage == 1) {
 
     previousPageCall = null;
 
-    nextPageCall = fetchNextAndPreviousPages(path,{ page: nextPage, colors: colors })
-      .then(response => {pageObject["next"] = response.length > 0 ? nextPage : null})
+  } else {
+
+    previousPageCall = fetchNextAndPreviousPages(path,{ page: currentPage - 1, colors: colors })
+      .then(response => { pageObject["previous"] = response.length > 0 ? currentPage - 1 : null })
       .catch(e => console.log("error: ", e))
+  }
+
+  if (responseList.length < 10) {
+
+    nextPageCall = null
 
   } else {
 
-    previousPageCall = fetchNextAndPreviousPages(path,{ page: previousPage, colors: colors })
-      .then(response => { pageObject["previous"] = response.length > 0 ? previousPage : null })
+    nextPageCall = fetchNextAndPreviousPages(path, { page: currentPage + 1, colors: colors })
+      .then(response => { pageObject["next"] = response.length > 0 ? currentPage + 1 : null })
       .catch(e => console.log("error: ", e))
-
-    nextPageCall = fetchNextAndPreviousPages(path, { page: nextPage, colors: colors })
-      .then(response => { pageObject["next"] = response.length > 0 ? nextPage : null })
-      .catch(e => console.log("error: ", e))
-
   }
+
 
   return Promise.all([previousPageCall, nextPageCall])
     .then(response => {return pageObject})
