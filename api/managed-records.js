@@ -45,10 +45,11 @@ var buildQueryString = (options, url) => {
 };
 
 /*
-Once the "/records" fetch completes, the returned reponse is formatted as per the instructions.
-In order to provide a previous and next page, two additional fetches need to be made to check whether there
-is additional data immediately before and after the initial fetch request. This process is encapsulated by the
-`getPageAssets` function called inside the `returnRecords` function.
+Once the "/records" fetch completes, the returned reponse is formatted as per the homework instructions.
+In order to provide a previous and next page, additional fetches need to be made to check whether there
+is additional data immediately before and after the initial fetch request. A "pages" object, that contains the
+previous and next page is sent to `formatRecords` along with initial fetch record response so that the answer
+can be returned. 
 */
 var returnRecords = (responseList, options) => {
 
@@ -59,7 +60,7 @@ var returnRecords = (responseList, options) => {
 }
 
 /*
-This function does the work of manipulating the fetch call reponse into an appropriate form as described in the Requirements.
+This function does the work of manipulating the fetch call reponse into an appropriate form as described in the requirements.
 We cycle through each entry in the response and create a new object and return it. After the cycle is complete, the newly
 formated object is returned.
 
@@ -120,22 +121,16 @@ var getPageAssets = (responseList, options) => {
   };
 
   if (currentPage == 1) {
-
     previousPageCall = null;
-
   } else {
-
     previousPageCall = fetchNextAndPreviousPages(path,{ page: currentPage - 1, colors: colors })
       .then(response => pageObject["previous"] = response.length > 0 ? currentPage - 1 : null )
       .catch(e => console.log("error: ", e))
   }
 
   if (responseList.length < 10) {
-
     nextPageCall = null
-
   } else {
-
     nextPageCall = fetchNextAndPreviousPages(path, { page: currentPage + 1, colors: colors })
       .then(response => pageObject["next"] = response.length > 0 ? currentPage + 1 : null )
       .catch(e => console.log("error: ", e))
