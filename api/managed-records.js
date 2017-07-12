@@ -47,7 +47,7 @@ var buildQueryString = (options, url) => {
 /*
 Once the "/records" fetch completes, the returned reponse is formatted as per the instructions.
 In order to provide a previous and next page, two additional fetches need to be made to check whether there
-is additional data immediately before and after the initial request. This process is encapsulated by the
+is additional data immediately before and after the initial fetch request. This process is encapsulated by the
 `getPageAssets` function called inside the `returnRecords` function.
 */
 var returnRecords = (responseList, options) => {
@@ -59,17 +59,11 @@ var returnRecords = (responseList, options) => {
 }
 
 /*
-This function does the extensive work of manipulating the fetch call reponse into an appropriate form that
-satisfies the unit test test cases. We cycle through each entry in the response and create a new object and return it.
+This function does the work of manipulating the fetch call reponse into an appropriate form as described in the Requirements.
+We cycle through each entry in the response and create a new object and return it. After the cycle is complete, the newly
+formated object is returned.
 
 Object format : {previousPage: int, nextPage: int, ids: list, open: list, closedPrimaryCount: int}
-
-1. Add all `ids` to returned object
-2. If the color of the entry is a primary color (red, blue, yellow) append a "isPrimary" (boolean) to the entry.
-3. If the entry disposition is "open" add it to the "open" list.
-4. If the entry disposition is "closed" and the entry color is primary increment the "closedCount" by 1.
-
-After the cycle is complete, each constituent part is added to a recordObject and returned.
 */
 var formatRecords = (pageResults, responseList, options) => {
 
@@ -154,7 +148,7 @@ var getPageAssets = (responseList, options) => {
 };
 
 /*
-Simple fetch call to build a new query string for the 10 entries immediately before and after
+A new query string is built for the 10 entries immediately before and after
 the initial fetch request. Returns the fetch call response.
 */
 var fetchNextAndPreviousPages = (path, options={}) => {
